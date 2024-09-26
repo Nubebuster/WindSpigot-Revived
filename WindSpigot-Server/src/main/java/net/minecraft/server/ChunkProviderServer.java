@@ -344,15 +344,15 @@ public class ChunkProviderServer implements IChunkProvider {
 
 				// CraftBukkit start
 				BlockFalling.instaFall = true;
-				Random random = new FastRandom();
-				random.setSeed(world.getSeed());
-				long xRand = random.nextLong() / 2L * 2L + 1L;
-				long zRand = random.nextLong() / 2L * 2L + 1L;
-				random.setSeed(i * xRand + j * zRand ^ world.getSeed());
 
 				org.bukkit.World world = this.world.getWorld();
-				if (world != null) {
+				if (world != null && !world.getPopulators().isEmpty()) {
 					this.world.populating = true;
+					Random random = new FastRandom();
+					random.setSeed(world.getSeed());
+					long xRand = random.nextLong() / 2L * 2L + 1L;
+					long zRand = random.nextLong() / 2L * 2L + 1L;
+					random.setSeed(i * xRand + j * zRand ^ world.getSeed());
 					try {
 						for (org.bukkit.generator.BlockPopulator populator : world.getPopulators()) {
 							populator.populate(world, random, chunk.bukkitChunk);
