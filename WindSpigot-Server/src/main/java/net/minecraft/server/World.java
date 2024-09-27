@@ -3065,6 +3065,79 @@ public abstract class World implements IBlockAccess {
 		return true;
 	}
 
+	/**
+	 * WindSpigot - Asynchronous lighting updates batched
+	 * This reduces the amount of calculations because the neighbors are the same for the same x and z.
+	 * This also prevents lightingExecutor.submit spam when this function is accidentally called on the server thread
+	 *  while useAsyncLighting is set to true.
+	 */
+	public void updateLightBatched(final EnumSkyBlock enumskyblock, int x, int z, int yBottom, int yTop) {
+		Chunk chunk = this.getChunkIfLoaded(x >> 4, z >> 4);
+		if (chunk == null) {
+			return;
+		}
+
+		List<Chunk> neighbors = new ArrayList<>();
+		for (int cx = (x >> 4) - 1; cx <= (x >> 4) + 1; ++cx) {
+			for (int cz = (z >> 4) - 1; cz <= (z >> 4) + 1; ++cz) {
+				if (cx != x >> 4 && cz != z >> 4) {
+					Chunk neighbor = this.getChunkIfLoaded(cx, cz);
+					if (neighbor != null) {
+						neighbors.add(neighbor);
+					}
+				}
+			}
+		}
+
+		List<BlockPosition> positions = new ArrayList<>();
+		for (int i1 = yBottom; i1 < yTop; ++i1) {
+			positions.add(new BlockPosition(x, i1, z));
+		}
+
+		List<Runnable> tasks = new ArrayList<>(positions.size());
+
+		if (!chunk.world.paperSpigotConfig.useAsyncLighting) {
+			for (BlockPosition position : positions) {
+				this.c(enumskyblock, position, chunk, null);
+			}
+			return;
+		}
+
+		boolean isPrimaryThread = Bukkit.isPrimaryThread();
+
+		if (!isPrimaryThread) {
+			for (BlockPosition position : positions) {
+				this.c(enumskyblock, position, chunk, neighbors);
+			}
+			return;
+		}
+
+		for (BlockPosition position : positions) {
+			tasks.add(new Runnable() {
+				@Override
+				public void run() {
+					World.this.c(enumskyblock, position, chunk, neighbors);
+				}
+			});
+		}
+
+		if (!tasks.isEmpty()) {
+			neighbors.forEach(neighbor -> {
+				neighbor.pendingLightUpdates.incrementAndGet();
+				neighbor.lightUpdateTime = chunk.world.getTime();
+			});
+
+			chunk.pendingLightUpdates.incrementAndGet();
+			chunk.lightUpdateTime = chunk.world.getTime();
+
+			lightingExecutor.submit(() -> {
+				for (Runnable task : tasks) {
+					task.run();
+				}
+			});
+		}
+	}
+
 	public boolean a(boolean flag) {
 		return false;
 	}
