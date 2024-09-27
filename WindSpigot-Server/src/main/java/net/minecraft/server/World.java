@@ -13,6 +13,7 @@ import java.util.concurrent.Callable;
 // PaperSpigot start
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 import org.bukkit.Bukkit;
 import org.bukkit.block.BlockState;
@@ -3094,8 +3095,6 @@ public abstract class World implements IBlockAccess {
 			positions.add(new BlockPosition(x, i1, z));
 		}
 
-		List<Runnable> tasks = new ArrayList<>(positions.size());
-
 		if (!chunk.world.paperSpigotConfig.useAsyncLighting) {
 			for (BlockPosition position : positions) {
 				this.c(enumskyblock, position, chunk, null);
@@ -3105,6 +3104,12 @@ public abstract class World implements IBlockAccess {
 
 		boolean isPrimaryThread = Bukkit.isPrimaryThread();
 
+		chunk.pendingLightUpdates.addAndGet(positions.size());
+		positions.forEach((p) -> neighbors.forEach(neighbor -> neighbor.pendingLightUpdates.incrementAndGet()));
+
+		chunk.lightUpdateTime = chunk.world.getTime();
+		neighbors.forEach(neighbor -> neighbor.lightUpdateTime = chunk.world.getTime());
+
 		if (!isPrimaryThread) {
 			for (BlockPosition position : positions) {
 				this.c(enumskyblock, position, chunk, neighbors);
@@ -3112,24 +3117,10 @@ public abstract class World implements IBlockAccess {
 			return;
 		}
 
-		for (BlockPosition position : positions) {
-			tasks.add(new Runnable() {
-				@Override
-				public void run() {
-					World.this.c(enumskyblock, position, chunk, neighbors);
-				}
-			});
-		}
+		List<Runnable> tasks = positions.stream().map((p) ->
+				(Runnable) () -> World.this.c(enumskyblock, p, chunk, neighbors)).collect(Collectors.toList());
 
 		if (!tasks.isEmpty()) {
-			neighbors.forEach(neighbor -> {
-				neighbor.pendingLightUpdates.incrementAndGet();
-				neighbor.lightUpdateTime = chunk.world.getTime();
-			});
-
-			chunk.pendingLightUpdates.incrementAndGet();
-			chunk.lightUpdateTime = chunk.world.getTime();
-
 			lightingExecutor.submit(() -> {
 				for (Runnable task : tasks) {
 					task.run();
