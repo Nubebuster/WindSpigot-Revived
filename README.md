@@ -29,6 +29,8 @@ See the patches list below.
 ```
 [WindSpigotRevived-0001] Fix lightExecutor submit spam when generating chunks using getChunkAt or when teleporting into a new region. Chunk creation speed improved by 6x 30cc3eb
 [WindSpigotRevived-0002] Optimized light calculations by batching neighbor chunk calculations when recalculating gaps 4af022c
+[WindSpigotRevived-0003] Make FastRandom actually thread safe 8aac0f4
+[WindSpigotRevived-0004] Fix enchanting leading to server freeze 9274aa99
 
 [WindSpigot-0001] Thread affinity
 [WindSpigot-0002] WindSpigot config
