@@ -74,13 +74,16 @@ public strictfp class FastRandom extends Random implements Cloneable {
 	 */
 	@Override
 	protected int next(int nbits) {
-		long x;
-		long newSeed;
-		do {
-			x = seed.get();
-			newSeed = x ^ (x << 21) ^ (x >>> 35) ^ (x << 4);
-		} while (!seed.compareAndSet(x, newSeed)); // Ensures thread safety
-		return (int) (newSeed & ((1L << nbits) - 1));
+		return super.next(nbits);
+		//TODO this just is not random. Is it still a concurrency issue?
+		// IDK, if anyone wants to fix this go ahead. But it's not random.
+//		long x;
+//		long newSeed;
+//		do {
+//			x = seed.get();
+//			newSeed = x ^ (x << 21) ^ (x >>> 35) ^ (x << 4);
+//		} while (!seed.compareAndSet(x, newSeed)); // Ensures thread safety
+//		return (int) (newSeed & ((1L << nbits) - 1));
 	}
 
 	/**
