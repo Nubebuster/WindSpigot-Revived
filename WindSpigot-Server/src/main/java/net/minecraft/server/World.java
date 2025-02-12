@@ -1369,7 +1369,7 @@ public abstract class World implements IBlockAccess {
 				for (Entity e : entities) {
 					if (e instanceof EntityExperienceOrb) {
 						EntityExperienceOrb loopItem = (EntityExperienceOrb) e;
-						if (!loopItem.dead) {
+						if (!loopItem.dead && !loopItem.justCreated) {
 							xp.value += loopItem.value;
 							loopItem.die();
 						}
